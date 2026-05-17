@@ -7,14 +7,16 @@
 ## 🚀 Key Features
 
 - **Tactical Surface Engine**: Custom-built Google Maps integration with high-contrast industrial styling and custom SVG marker clusters.
-- **Dynamic Route Optimization**: Intelligent straight-line pathing and logistical grouping for complex multi-vehicle nodes.
+- **Dynamic Route Optimization**: Intelligent straight-line pathing, logistical grouping, and independent route visibility toggles.
 - **True Black Aesthetic**: A curated high-contrast UI (monochrome) designed for maximum focus and visual clarity in professional dispatch environments.
-- **Live Fleet Management**: Real-time vehicle assignment, group manifest tracking, and logistical state synchronization via React Context.
+- **Live Fleet Management**: Real-time vehicle assignment, group manifest tracking, and logistical state synchronization via React Context and Supabase.
+- **Secure Authentication**: Rotating, environment-salted SHA-256 password validation with automatic 4-hour session expiry.
 - **Seamless Data Ingestion**: Robust clipboard/paste-based ticket ingestion with automated geocoding and node resolution.
 
 ## 🛠️ Technology Stack
 
 - **Framework**: [Next.js 14+](https://nextjs.org/) (App Router)
+- **Database**: [Supabase](https://supabase.com/) (Real-time tracking, fleet manifest persistence)
 - **Mapping**: [@vis.gl/react-google-maps](https://visgl.github.io/react-google-maps/)
 - **State Management**: React Context with robust synchronization logic.
 - **Styling**: TailwindCSS with custom high-contrast industrial color palettes.

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Truck, Trash2, Navigation2, Target, EyeOff } from "lucide-react";
+import { Truck, Trash2, Navigation2, Target, EyeOff, Eye } from "lucide-react";
 import { getTicketConfig, getVehicleColor } from "@/lib/constants";
 import { useDispatch } from "@/context/DispatchContext";
 
@@ -14,15 +14,46 @@ interface VehicleStatsProps {
 export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
   const context = useDispatch();
   const [confirmClear, setConfirmClear] = useState<string | null>(null);
+  const [generatedRoutes, setGeneratedRoutes] = useState<Record<string, boolean>>({});
+  const [visibleRoutes, setVisibleRoutes] = useState<Record<string, boolean>>({});
   
+  useEffect(() => {
+    const handleGenerated = (e: any) => {
+      const { vehicle } = e.detail;
+      setGeneratedRoutes(prev => ({ ...prev, [vehicle]: true }));
+      setVisibleRoutes(prev => ({ ...prev, [vehicle]: true }));
+    };
+    
+    const handleClear = (e: any) => {
+      const { vehicle } = e.detail;
+      if (vehicle === 'all') {
+        setGeneratedRoutes({});
+        setVisibleRoutes({});
+      } else {
+        setGeneratedRoutes(prev => ({ ...prev, [vehicle]: false }));
+        setVisibleRoutes(prev => ({ ...prev, [vehicle]: false }));
+      }
+    };
+
+    window.addEventListener('tactical-map-route-generated', handleGenerated);
+    window.addEventListener('tactical-map-clear-route', handleClear);
+    return () => {
+      window.removeEventListener('tactical-map-route-generated', handleGenerated);
+      window.removeEventListener('tactical-map-clear-route', handleClear);
+    };
+  }, []);
+
   if (vehicles.length === 0) return null;
+
+  const anyRouteGenerated = Object.values(generatedRoutes).some(v => v);
+  const anyRouteVisible = Object.values(visibleRoutes).some(v => v);
 
   const trigger = (type: 'pan' | 'in' | 'out') => {
     window.dispatchEvent(new CustomEvent('tactical-map-action', { detail: type }));
   };
 
   return (
-    <div className="w-[280px] bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden pointer-events-auto shrink-0 h-fit max-h-full relative">
+    <div className="w-[320px] bg-white/95 backdrop-blur-md border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden pointer-events-auto shrink-0 h-fit max-h-full relative">
       {confirmClear && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[999999] flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl p-6 flex flex-col items-center text-center w-full max-w-sm animate-in zoom-in-95 duration-200">
@@ -42,6 +73,7 @@ export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
                 onClick={() => {
                   context.clearVehicleAssignments(confirmClear);
                   window.dispatchEvent(new CustomEvent('tactical-map-clear-route', { detail: { vehicle: confirmClear } }));
+                  setVisibleRoutes(prev => ({ ...prev, [confirmClear]: false }));
                   setConfirmClear(null);
                 }}
                 className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-black uppercase tracking-widest shadow-md hover:bg-red-600 transition-colors"
@@ -61,14 +93,36 @@ export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('tactical-map-toggle-routes'))}
-            className="w-6 h-6 flex items-center justify-center bg-white rounded border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-all"
-            title="Toggle Routes"
+            onClick={() => {
+              if (!anyRouteGenerated) return;
+              const nextVisible = !anyRouteVisible;
+              window.dispatchEvent(new CustomEvent('tactical-map-set-route-visibility', { detail: { vehicle: 'all', visible: nextVisible } }));
+              setVisibleRoutes(prev => {
+                const next = { ...prev };
+                vehicles.forEach(v => {
+                  if (generatedRoutes[v]) {
+                    next[v] = nextVisible;
+                  }
+                });
+                return next;
+              });
+            }}
+            disabled={!anyRouteGenerated}
+            className={`w-6 h-6 flex items-center justify-center rounded border transition-all ${
+              !anyRouteGenerated
+                ? "opacity-20 cursor-not-allowed bg-white border-gray-100 text-gray-300"
+                : anyRouteVisible 
+                  ? "bg-blue-50 border-blue-200 text-blue-500 hover:bg-blue-100" 
+                  : "bg-white border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+            }`}
+            title={!anyRouteGenerated ? "No routes generated" : anyRouteVisible ? "Hide All Routes" : "Show All Routes"}
           >
-            <EyeOff size={12} />
+            {anyRouteVisible ? <Eye size={12} /> : <EyeOff size={12} />}
           </button>
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('tactical-map-visualize-route', { detail: { vehicle: 'all' } }))}
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('tactical-map-visualize-route', { detail: { vehicle: 'all' } }));
+            }}
             className="w-6 h-6 flex items-center justify-center bg-black text-white rounded hover:bg-gray-800 transition-all"
             title="Visualize All Routes"
           >
@@ -93,6 +147,8 @@ export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
           
           const vColor = getVehicleColor(vehicle, vehicles);
           const VIcon = vColor?.icon || Truck;
+          const isRouteGenerated = !!generatedRoutes[vehicle];
+          const isRouteVisible = !!visibleRoutes[vehicle];
           
           return (
             <div key={vehicle} className={`bg-white border border-gray-100 rounded-md shadow-sm shrink-0 border-l-4 ${vColor?.borderColor || 'border-gray-200'}`}>
@@ -117,7 +173,7 @@ export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
                       return (
                         <div key={type} className="flex items-center gap-1 shrink-0" title={tConfig.label}>
                           <Icon size={13} className={tConfig.color} />
-                          <span className="text-xs font-bold text-gray-700">{vStats[type]}</span>
+                           <span className="text-xs font-bold text-gray-700">{vStats[type]}</span>
                         </div>
                       );
                     })}
@@ -127,9 +183,36 @@ export default function VehicleStats({ stats, vehicles }: VehicleStatsProps) {
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 shrink-0 ml-auto pl-1">
                   <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('tactical-map-visualize-route', { detail: { vehicle } }))}
+                    onClick={() => {
+                      if (!isRouteGenerated) return;
+                      const nextVisible = !isRouteVisible;
+                      window.dispatchEvent(new CustomEvent('tactical-map-set-route-visibility', { detail: { vehicle, visible: nextVisible } }));
+                      setVisibleRoutes(prev => ({ ...prev, [vehicle]: nextVisible }));
+                    }}
+                    disabled={!isRouteGenerated}
+                    className={`p-1.5 rounded transition-colors ${
+                      !isRouteGenerated 
+                        ? "opacity-25 cursor-not-allowed text-gray-300" 
+                        : isRouteVisible 
+                          ? "text-blue-500 bg-blue-50 hover:bg-blue-100" 
+                          : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                    }`}
+                    title={
+                      !isRouteGenerated 
+                        ? "Route not generated yet" 
+                        : isRouteVisible 
+                          ? `Hide Route for ${vehicle}` 
+                          : `Show Route for ${vehicle}`
+                    }
+                  >
+                    {isRouteVisible ? <Eye size={13} /> : <EyeOff size={13} />}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('tactical-map-visualize-route', { detail: { vehicle } }));
+                    }}
                     className="p-1.5 rounded text-gray-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                    title={`Map Route for ${vehicle}`}
+                    title={`Generate Route for ${vehicle}`}
                   >
                     <Navigation2 size={13} className="rotate-45" />
                   </button>

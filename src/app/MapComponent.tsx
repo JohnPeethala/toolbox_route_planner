@@ -400,6 +400,9 @@ function MapEngine() {
 
             polylinesRef.current[v] = polyline;
             straightPath.forEach(p => allBounds.extend(p));
+            
+            // Notify that route has been successfully generated
+            window.dispatchEvent(new CustomEvent('tactical-map-route-generated', { detail: { vehicle: v } }));
           }
         } catch (err) {
           console.error(`Optimization failed for vehicle ${v}:`, err);
@@ -440,6 +443,19 @@ function MapEngine() {
     };
     window.addEventListener('tactical-map-toggle-routes', handleToggleRoutes);
     return () => window.removeEventListener('tactical-map-toggle-routes', handleToggleRoutes);
+  }, []);
+
+  useEffect(() => {
+    const handleSetRouteVisibility = (e: any) => {
+      const { vehicle, visible } = e.detail;
+      if (vehicle === 'all') {
+        Object.values(polylinesRef.current).forEach(p => p.setVisible(visible));
+      } else if (polylinesRef.current[vehicle]) {
+        polylinesRef.current[vehicle].setVisible(visible);
+      }
+    };
+    window.addEventListener('tactical-map-set-route-visibility', handleSetRouteVisibility);
+    return () => window.removeEventListener('tactical-map-set-route-visibility', handleSetRouteVisibility);
   }, []);
 
   // Handle unmount cleanup separately

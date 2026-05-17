@@ -64,7 +64,7 @@ const DispatchContext = createContext<DispatchContextType | undefined>(undefined
 // --- Provider ---
 
 export function DispatchProvider({ children }: { children: React.ReactNode }) {
-  const [city, setCityState] = useState("Mumbai");
+  const [city, setCityState] = useState("Hyderabad");
   const [groups, setGroups] = useState<LocationGroup[]>([]);
   const [vehicles, setVehiclesState] = useState<string[]>([]);
   const [groupVehicles, setGroupVehicles] = useState<Record<string, string>>({});
