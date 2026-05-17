@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, Printer } from "lucide-react";
 
 interface HeaderProps {
   city: string;
@@ -40,7 +40,7 @@ export default function Header({
         
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
-            <MapPin size={14} className="text-blue-500" />
+            <MapPin size={14} className="text-gray-900" />
             <input 
               type="text" 
               value={city}
@@ -57,8 +57,16 @@ export default function Header({
           onClick={onFleetOpen}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900"
         >
-          <Users size={13} className="text-blue-500" />
+          <Users size={13} className="text-gray-900" />
           FLEET{vehicleCount > 0 ? ` (${vehicleCount})` : ''}
+        </button>
+
+        <button
+          onClick={() => window.print()}
+          className="flex items-center justify-center p-1.5 rounded-lg transition-all border border-gray-200 hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+          title="Print Manifest"
+        >
+          <Printer size={13} />
         </button>
       </div>
     </header>

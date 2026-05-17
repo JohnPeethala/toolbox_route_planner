@@ -23,27 +23,39 @@ The tactical map surface is built on `@vis.gl/react-google-maps` with several cu
 - **FitBounds**: The map intelligently calculates a bounding box to include the warehouse and all active logistical nodes, ensuring the entire operation is visible on load or update.
 - **Industrial Styling**: Uses a customized `LIGHT_STYLES` configuration that strips standard Google Map labels (POI, Transit) to focus entirely on logistics.
 
-## 3. UI/UX Philosophy
+## 4. UI Component Architecture
 
-- **High-Contrast Minimalism**: Every component uses a strict grayscale palette with strategic color accents (e.g., `#a855f7` for mixed assignments).
-- **Tactical Feedback**: Visual cues like the "Spotlight" effect on map nodes when interacting with dispatch cards.
-- **Industrial Typography**: Heavy use of `font-black` and `tracking-widest` to mimic industrial equipment interfaces.
+The interface is divided into functional modules that interact with the global state:
 
-## 4. Operational Workflows
+- **`Header.tsx`**: Contains the brand identity, city code resolution, and fleet management trigger.
+- **`DispatchConsole.tsx`**: The primary data grid. It maps resolved nodes to cards and provides the interface for vehicle assignment.
+- **`NodeGroupCard.tsx`**: Renders ticket volume summaries and assignment status. It includes a "Focus" action that communicates directly with the map engine.
+- **`ManifestModal.tsx`**: Handles bulk ticket ingestion via a high-performance clipboard parser.
+- **`FleetModal.tsx`**: Manages the active vehicle roster and assignment availability.
 
-### Manifest Ingestion
-1. User pastes raw data into the `ManifestModal`.
-2. The system parses tab-separated values.
-3. Coordinates are resolved, and tickets are grouped by physical proximity.
-4. Groups are rendered as tactical nodes on the map.
+## 5. Event Communication System
 
-### Dispatching
-1. Dispatcher selects a vehicle from the list.
-2. The vehicle is assigned to a node group.
-3. A tactical path is drawn on the map.
-4. The group card updates with a high-contrast assignment badge.
+The Toolbox uses a decoupled event-based system to allow UI components to control the map without prop-drilling or complex state management.
 
-## 5. Development Guidelines
+### Map Actions (`tactical-map-action`)
+Triggered via `window.dispatchEvent`, this allows remote control of map viewport actions:
+- `pan`: Resets view to include all active nodes.
+- `in / out`: Programmatic zoom control.
 
-- **Component Creation**: Maintain the "True Black" aesthetic. Avoid rounded corners exceeding `xl`.
-- **State Updates**: All logistical mutations must go through the `useDispatch` hook to maintain cross-component synchronization.
+### Node Focusing (`tactical-map-focus-node`)
+Triggered when a user interacts with a Dispatch Card. The map engine listens for this event to smoothly pan and zoom into the specific node's coordinates.
+
+### Route Visualization (`tactical-map-visualize-route`)
+Calculates and renders the optimized logistical paths on the map layer for a specific vehicle's assigned nodes.
+
+## 6. Logistical Optimization
+
+The "Tactical Paths" are currently implemented as optimized straight-line vectors originating from the Warehouse. 
+- **Grouping**: Tickets are grouped by proximity to reduce map clutter and improve dispatch efficiency.
+- **Visual Priority**: Markers change state (color/opacity) based on their assignment status, providing immediate visual confirmation of dispatch progress.
+
+## 7. Deployment & Environment
+
+- **Next.js Turbopack**: Optimized for extremely fast development cycles.
+- **Production Builds**: Assets are optimized for high-performance rendering on low-latency dispatch terminals.
+- **Environment Safety**: API keys are restricted to client-side usage via `NEXT_PUBLIC_` prefixes.

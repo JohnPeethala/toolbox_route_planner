@@ -12,6 +12,7 @@ import Header from "@/components/Header";
 import DispatchConsole from "@/components/DispatchConsole";
 import ManifestModal from "@/components/ManifestModal";
 import FleetModal from "@/components/FleetModal";
+import PrintManifest from "@/components/PrintManifest";
 
 const MapComponent = dynamic(() => import("./MapComponent"), { 
   ssr: false, 
@@ -102,7 +103,9 @@ export default function RoutePlanner() {
   };
 
   return (
-    <div className="relative h-screen w-full overflow-hidden font-sans transition-all duration-300 bg-[#f5f5f7] text-black">
+    <>
+      <PrintManifest />
+      <div className="relative h-screen w-full overflow-hidden font-sans transition-all duration-300 bg-[#f5f5f7] text-black print:hidden">
       
       <div className="absolute inset-0 z-0 overflow-hidden">
         <MapComponent />
@@ -141,6 +144,7 @@ export default function RoutePlanner() {
         onRemoveVehicle={removeVehicle}
       />
 
-    </div>
+      </div>
+    </>
   );
 }

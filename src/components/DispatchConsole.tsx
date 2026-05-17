@@ -5,6 +5,7 @@ import { LayoutGrid, PlusSquare, Database, Navigation2, Target } from "lucide-re
 import { useDispatch } from "@/context/DispatchContext";
 import { getVehicleColor } from "@/lib/constants";
 import NodeGroupCard from "./NodeGroupCard";
+import VehicleStats from "./VehicleStats";
 
 interface DispatchConsoleProps {
   onLoadData: () => void;
@@ -20,11 +21,30 @@ export default function DispatchConsole({ onLoadData }: DispatchConsoleProps) {
   const assignGroupVehicle = context?.assignGroupVehicle || (() => {});
   const assignTicketVehicle = context?.assignTicketVehicle || (() => {});
   const updateCoords = context?.updateCoords || (() => {});
-  const unassignedCount = context?.unassignedCount || 0;
-
+  
+  const totalTickets = groups.reduce((sum, g) => sum + g.tickets.length, 0);
+  const unassignedTickets = groups.reduce((sum, g) => {
+    return sum + g.tickets.filter(t => !ticketVehicles[`${g.id}::${t.id}`]).length;
+  }, 0);
   const [showCoordsForGroup, setShowCoordsForGroup] = useState<string | null>(null);
   const [pulseGroup, setPulseGroup] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const vehicleStats: Record<string, Record<string, number>> = {};
+  vehicles.forEach(v => { vehicleStats[v] = {}; });
+
+  groups.forEach(group => {
+    group.tickets.forEach(ticket => {
+      const vehicle = ticketVehicles[`${group.id}::${ticket.id}`];
+      if (vehicle && vehicleStats[vehicle] !== undefined) {
+        const type = ticket.type || 'Unknown';
+        if (!vehicleStats[vehicle][type]) {
+          vehicleStats[vehicle][type] = 0;
+        }
+        vehicleStats[vehicle][type]++;
+      }
+    });
+  });
 
   const handleGroupAssign = (groupId: string, v: string) => {
     assignGroupVehicle(groupId, v);
@@ -34,28 +54,12 @@ export default function DispatchConsole({ onLoadData }: DispatchConsoleProps) {
     }
   };
 
-  const trigger = (type: 'pan' | 'in' | 'out') => {
-    window.dispatchEvent(new CustomEvent('tactical-map-action', { detail: type }));
-  };
-
   return (
     <aside className="absolute top-5 right-5 bottom-5 flex gap-3 z-30 pointer-events-none">
-      {/* Map Control Bar */}
-      <div className="flex flex-col justify-end gap-1.5 pointer-events-auto">
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('tactical-map-visualize-route', { detail: { vehicle: 'all' } }))}
-          className="w-9 h-9 flex items-center justify-center bg-black text-white rounded-lg shadow-lg hover:bg-gray-800 transition-all"
-          title="Visualize All Routes"
-        >
-          <Navigation2 size={16} fill="currentColor" className="rotate-45" />
-        </button>
-        <button
-          onClick={() => trigger('pan')}
-          className="w-9 h-9 flex items-center justify-center bg-white rounded-lg border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all shadow-lg"
-          title="Fit All Nodes"
-        >
-          <Target size={16} />
-        </button>
+      
+      {/* Left Column (Stats + Map Controls) */}
+      <div className="flex flex-col h-full items-end gap-3 pointer-events-none">
+        <VehicleStats stats={vehicleStats} vehicles={vehicles} />
       </div>
 
       <div className="w-[400px] h-full rounded-xl border border-gray-200 flex flex-col overflow-hidden shadow-lg bg-white/95 backdrop-blur-md pointer-events-auto">
@@ -72,7 +76,7 @@ export default function DispatchConsole({ onLoadData }: DispatchConsoleProps) {
                 <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100/80 border border-gray-200/50">
                   <span className="w-1 h-1 rounded-full bg-blue-500 animate-pulse"></span>
                   <span className="text-[8px] font-bold text-gray-600 uppercase tracking-[0.1em]">
-                    <span className="text-gray-900">{unassignedCount}</span><span className="text-gray-400 mx-0.5">/</span><span className="text-gray-900">{groups.length}</span>
+                    <span className="text-gray-900">{unassignedTickets}</span><span className="text-gray-400 mx-0.5">/</span><span className="text-gray-900">{totalTickets}</span>
                     <span className="ml-1 text-gray-400">Not Assigned</span>
                   </span>
                 </div>

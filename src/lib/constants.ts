@@ -35,14 +35,14 @@ export const TICKET_TYPE_CONFIG: Record<string, { color: string, hex: string, la
 };
 
 export const VEHICLE_PALETTE = [
-  { icon: Van,          hex: "#3b82f6", textColor: "text-blue-500",    borderColor: "border-l-blue-500",    badge: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
-  { icon: Car,          hex: "#10b981", textColor: "text-emerald-500", borderColor: "border-l-emerald-500", badge: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  { icon: Bike,         hex: "#f59e0b", textColor: "text-amber-500",   borderColor: "border-l-amber-500",   badge: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
-  { icon: Bus,          hex: "#6366f1", textColor: "text-indigo-500",  borderColor: "border-l-indigo-500",  badge: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" },
-  { icon: Tractor,      hex: "#f43f5e", textColor: "text-rose-500",    borderColor: "border-l-rose-500",    badge: "bg-rose-500/10 text-rose-500 border-rose-500/20" },
-  { icon: Forklift,     hex: "#f97316", textColor: "text-orange-500",  borderColor: "border-l-orange-500",  badge: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  { icon: CarTaxiFront, hex: "#06b6d4", textColor: "text-cyan-500",    borderColor: "border-l-cyan-500",    badge: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20" },
-  { icon: Ambulance,    hex: "#ec4899", textColor: "text-pink-500",    borderColor: "border-l-pink-500",    badge: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
+  { icon: Van,          hex: "#ef4444", textColor: "text-red-500",    borderColor: "border-l-red-500",    badge: "bg-red-500/10 text-red-500 border-red-500/20" },
+  { icon: Car,          hex: "#3b82f6", textColor: "text-blue-500",   borderColor: "border-l-blue-500",   badge: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  { icon: Bike,         hex: "#22c55e", textColor: "text-green-500",  borderColor: "border-l-green-500",  badge: "bg-green-500/10 text-green-500 border-green-500/20" },
+  { icon: Bus,          hex: "#eab308", textColor: "text-yellow-500", borderColor: "border-l-yellow-500", badge: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+  { icon: Tractor,      hex: "#a855f7", textColor: "text-purple-500", borderColor: "border-l-purple-500", badge: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
+  { icon: Forklift,     hex: "#f97316", textColor: "text-orange-500", borderColor: "border-l-orange-500", badge: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
+  { icon: CarTaxiFront, hex: "#14b8a6", textColor: "text-teal-500",   borderColor: "border-l-teal-500",   badge: "bg-teal-500/10 text-teal-500 border-teal-500/20" },
+  { icon: Ambulance,    hex: "#ec4899", textColor: "text-pink-500",   borderColor: "border-l-pink-500",   badge: "bg-pink-500/10 text-pink-500 border-pink-500/20" },
 ];
 
 export function getTicketConfig(type: string) {

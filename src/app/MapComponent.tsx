@@ -7,7 +7,7 @@ import {
   useMap,
   Marker
 } from '@vis.gl/react-google-maps';
-import { Target, Home, Navigation2, Plus, Minus } from "lucide-react";
+import { Target, Home, Navigation2, Plus, Minus, CircleDashed } from "lucide-react";
 import { getVehicleColor, getTicketConfig, TICKET_TYPE_CONFIG } from "@/lib/constants";
 import { useDispatch } from "@/context/DispatchContext";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -308,6 +308,21 @@ function MapEngine() {
             }
           });
 
+          marker.addListener('rightclick', (e: any) => {
+            if (e.domEvent) {
+              e.domEvent.preventDefault();
+              e.domEvent.stopPropagation();
+              window.dispatchEvent(new CustomEvent('tactical-map-context-menu', { 
+                detail: { 
+                  groupId: group.id, 
+                  x: e.domEvent.clientX, 
+                  y: e.domEvent.clientY,
+                  vehicle: groupVehicles[group.id] || ''
+                } 
+              }));
+            }
+          });
+
           markersRef.current[group.id] = marker;
         }
       }
@@ -401,6 +416,32 @@ function MapEngine() {
     return () => window.removeEventListener('tactical-map-visualize-route', handleRouteAction);
   }, [map, groups, groupVehicles, vehicles]);
 
+  useEffect(() => {
+    const handleClearRoute = (e: any) => {
+      const { vehicle } = e.detail;
+      if (vehicle === 'all') {
+        Object.values(polylinesRef.current).forEach(p => p.setMap(null));
+        polylinesRef.current = {};
+      } else if (polylinesRef.current[vehicle]) {
+        polylinesRef.current[vehicle].setMap(null);
+        delete polylinesRef.current[vehicle];
+      }
+    };
+    window.addEventListener('tactical-map-clear-route', handleClearRoute);
+    return () => window.removeEventListener('tactical-map-clear-route', handleClearRoute);
+  }, []);
+
+  useEffect(() => {
+    const handleToggleRoutes = () => {
+      Object.values(polylinesRef.current).forEach(p => {
+        const isVisible = p.getVisible();
+        p.setVisible(!isVisible);
+      });
+    };
+    window.addEventListener('tactical-map-toggle-routes', handleToggleRoutes);
+    return () => window.removeEventListener('tactical-map-toggle-routes', handleToggleRoutes);
+  }, []);
+
   // Handle unmount cleanup separately
   useEffect(() => {
     return () => {
@@ -419,6 +460,35 @@ function MapEngine() {
 }
 
 export default function MapComponent() {
+  const context = useDispatch();
+  const vehicles = context?.vehicles || [];
+  const assignGroupVehicle = context?.assignGroupVehicle || (() => {});
+  
+  const [contextMenu, setContextMenu] = useState<{ groupId: string, x: number, y: number, vehicle: string } | null>(null);
+
+  useEffect(() => {
+    const handleContextMenu = (e: any) => {
+      // Use setTimeout to ensure this runs AFTER any document-level contextmenu listeners that might clear it
+      setTimeout(() => {
+        setContextMenu(e.detail);
+      }, 10);
+    };
+    window.addEventListener('tactical-map-context-menu', handleContextMenu);
+    return () => window.removeEventListener('tactical-map-context-menu', handleContextMenu);
+  }, []);
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClick);
+      document.addEventListener('contextmenu', handleClick);
+    }
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('contextmenu', handleClick);
+    };
+  }, [contextMenu]);
+
   const trigger = (type: 'pan' | 'in' | 'out') => {
     window.dispatchEvent(new CustomEvent('tactical-map-action', { detail: type }));
   };
@@ -448,6 +518,45 @@ export default function MapComponent() {
           <MapEngine />
           <WarehouseMarker />
         </Map>
+
+        {/* Right-Click Context Menu for Vehicle Assignment */}
+        {contextMenu && (
+          <div 
+            className="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden w-[180px] animate-in fade-in zoom-in-95 duration-150"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+            <div className="max-h-[200px] overflow-y-auto py-1">
+              <button
+                onClick={() => { assignGroupVehicle(contextMenu.groupId, ""); setContextMenu(null); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                  !contextMenu.vehicle ? 'bg-blue-50 text-blue-600' : 'text-gray-400 hover:bg-gray-50'
+                }`}
+              >
+                <CircleDashed size={13} strokeWidth={1.5} />
+                UNASSIGNED
+              </button>
+              {vehicles.map((v) => {
+                const color = getVehicleColor(v, vehicles);
+                const Icon = color ? color.icon : CircleDashed;
+                const isSelected = v === contextMenu.vehicle;
+                return (
+                  <button
+                    key={v}
+                    onClick={() => { assignGroupVehicle(contextMenu.groupId, v); setContextMenu(null); }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+                      isSelected ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <Icon size={13} className={color ? color.textColor : ''} strokeWidth={1.5} />
+                    {v}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
       
       <style jsx global>{`

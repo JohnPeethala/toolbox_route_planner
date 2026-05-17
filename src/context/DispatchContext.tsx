@@ -50,6 +50,7 @@ interface DispatchContextType {
   removeVehicle: (name: string) => Promise<void>;
   assignGroupVehicle: (groupId: string, vehicle: string) => void;
   assignTicketVehicle: (groupId: string, ticketId: string, vehicle: string) => void;
+  clearVehicleAssignments: (vehicle: string) => Promise<void>;
   updateCoords: (groupId: string, coords: string) => void;
   commitManifest: (tickets: Ticket[], action: 'append' | 'replace') => Promise<void>;
   resetDispatch: () => void;
@@ -103,16 +104,16 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
     const tVehiclesMap: Record<string, string> = {};
 
     ticketsData.forEach(t => {
-      const sanitizedArea = (t.area || 'Unknown').toLowerCase().trim();
+      const sanitizedArea = (t.area || 'UNKNOWN').toUpperCase().trim();
       const sanitizedPincode = (t.pincode || '000000').trim();
       const groupId = `${sanitizedArea}-${sanitizedPincode}`;
       
       if (!parsedGroups[groupId]) {
-        const cacheKey = `${(t.area||'Unknown').trim()}::${sanitizedPincode}`.toLowerCase();
+        const cacheKey = `${(t.area||'UNKNOWN').trim()}::${sanitizedPincode}`.toLowerCase();
         parsedGroups[groupId] = {
           id: groupId,
           serial: 0,
-          originalArea: t.area || 'Unknown Area',
+          originalArea: (t.area || 'UNKNOWN AREA').toUpperCase().trim(),
           sanitizedArea,
           pincode: sanitizedPincode,
           tickets: [],
@@ -172,12 +173,14 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addVehicle = async (name: string) => {
-    if (!name || vehicles.includes(name)) return;
-    setVehiclesState(prev => [...prev, name]);
-    const { error } = await supabase.from('fleet').insert({ vehicle_name: name });
+    const formattedName = (name || '').trim().toUpperCase();
+    if (!formattedName || vehicles.includes(formattedName)) return;
+    
+    setVehiclesState(prev => [...prev, formattedName]);
+    const { error } = await supabase.from('fleet').insert({ vehicle_name: formattedName });
     if (error) {
       console.error("Failed to add vehicle to DB:", error);
-      setVehiclesState(prev => prev.filter(v => v !== name));
+      setVehiclesState(prev => prev.filter(v => v !== formattedName));
     }
   };
 
@@ -279,6 +282,27 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
     supabase.from('tickets').update({ assigned_vehicle: vehicle || null }).eq('ticket_id', ticketId).then();
   };
 
+  const clearVehicleAssignments = async (vehicle: string) => {
+    setGroupVehicles(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(groupId => {
+        if (next[groupId] === vehicle) delete next[groupId];
+      });
+      return next;
+    });
+    
+    setTicketVehicles(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(key => {
+        if (next[key] === vehicle) delete next[key];
+      });
+      return next;
+    });
+
+    const { error } = await supabase.from('tickets').update({ assigned_vehicle: null }).eq('assigned_vehicle', vehicle);
+    if (error) console.error("Failed to clear vehicle assignments in DB:", error);
+  };
+
   const updateCoords = (groupId: string, val: string) => {
     setGroups(prev => prev.map(g => g.id === groupId ? { ...g, coords: val } : g));
   };
@@ -298,7 +322,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       const uniqueLocationsMap = new Map<string, { area: string, pincode: string, fullAddress: string }>();
       
       pendingRows.forEach(row => {
-        const area = (row.area || 'Unknown').trim();
+        const area = (row.area || 'UNKNOWN').trim().toUpperCase();
         const pincode = (row.pincode || '000000').trim();
         const locKey = `${area}::${pincode}`.toLowerCase();
         if (!uniqueLocationsMap.has(locKey)) {
@@ -367,10 +391,10 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       // 6. Tickets Database Save
       const ticketsToInsert = pendingRows.map(row => ({
         ticket_id: row.id,
-        name: row.name,
-        area: row.area,
-        pincode: row.pincode,
-        type: row.type,
+        name: (row.name || 'UNKNOWN').trim().toUpperCase(),
+        area: (row.area || 'UNKNOWN').trim().toUpperCase(),
+        pincode: (row.pincode || '000000').trim(),
+        type: (row.type || 'GENERAL').trim().toUpperCase(),
       }));
 
       if (action === 'replace') {
@@ -400,7 +424,7 @@ export function DispatchProvider({ children }: { children: React.ReactNode }) {
       setCity, setGroups, setVehicles: setVehiclesState,
       addVehicle,
       removeVehicle,
-      assignGroupVehicle, assignTicketVehicle, updateCoords,
+      assignGroupVehicle, assignTicketVehicle, clearVehicleAssignments, updateCoords,
       commitManifest, resetDispatch, fetchStateFromDB
     }}>
       {children}
